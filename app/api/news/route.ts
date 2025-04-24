@@ -10,13 +10,15 @@ export async function GET() {
     // Fetch the HTML content from futuretools.io/news
     const response = await fetch("https://www.futuretools.io/news", {
       headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "it-IT,it;q=0.8,en-US;q=0.5,en;q=0.3",
       },
       cache: "no-store",
     })
 
     if (!response.ok) {
+      console.error(`Failed to fetch: ${response.status}`, await response.text())
       throw new Error(`Failed to fetch: ${response.status}`)
     }
 
@@ -26,38 +28,47 @@ export async function GET() {
 
     // Utilizziamo i selettori CSS specifici forniti
     $(".news-item").each((_, element) => {
-      // Estrai la data
-      const dateElement = $(element).find(".text-block-30.blue-text-dm")
-      const date = dateElement.text().trim()
+      try {
+        // Estrai la data
+        const dateElement = $(element).find(".text-block-30.blue-text-dm")
+        const date = dateElement.text().trim()
 
-      // Estrai il titolo
-      const titleElement = $(element).find(".text-block-27.white-text-db-gc")
-      const title = titleElement.text().trim()
+        // Estrai il titolo
+        const titleElement = $(element).find(".text-block-27.white-text-db-gc")
+        const title = titleElement.text().trim()
 
-      // Estrai la fonte
-      const sourceElement = $(element).find(".text-block-28.blue-text-dm")
-      const source = sourceElement.text().trim()
+        // Estrai la fonte
+        const sourceElement = $(element).find(".text-block-28.blue-text-dm")
+        const source = sourceElement.text().trim()
 
-      // Estrai l'URL
-      const linkElement = $(element).find("a.link-block-8.w-inline-block")
-      let url = linkElement.attr("href") || "#"
+        // Estrai l'URL
+        const linkElement = $(element).find("a.link-block-8.w-inline-block")
+        let url = linkElement.attr("href") || "#"
 
-      // Sostituisci i parametri UTM
-      url = url.replace(
-        /\?utm_source=futuretools\.io(&amp;|&)utm_medium=newspage/,
-        "?utm_source=thepromptmaster.it&utm_medium=newspage",
-      )
+        // Sostituisci i parametri UTM
+        url = url.replace(
+          /\?utm_source=futuretools\.io(&amp;|&)utm_medium=newspage/,
+          "?utm_source=thepromptmaster.it&utm_medium=newspage",
+        )
 
-      // Aggiungi la notizia solo se abbiamo almeno data e titolo
-      if (date && title) {
-        newsItems.push({
-          date,
-          title,
-          source,
-          url,
-        })
+        // Aggiungi la notizia solo se abbiamo almeno data e titolo
+        if (date && title) {
+          newsItems.push({
+            date,
+            title,
+            source,
+            url,
+          })
+        }
+      } catch (error) {
+        console.error("Error parsing news item:", error)
       }
     })
+
+    if (newsItems.length === 0) {
+      console.error("No news items found in the HTML")
+      return NextResponse.json({ error: "No news items found" }, { status: 404 })
+    }
 
     return NextResponse.json(newsItems)
   } catch (error) {

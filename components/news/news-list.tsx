@@ -8,7 +8,7 @@ interface NewsListProps {
 }
 
 export default function NewsList({ newsItems }: NewsListProps) {
-  if (!newsItems.length) {
+  if (!newsItems || newsItems.length === 0) {
     return (
       <div className="text-center py-12 bg-card rounded-lg border border-border p-8">
         <p className="text-muted-foreground">Nessuna notizia trovata. Riprova più tardi.</p>

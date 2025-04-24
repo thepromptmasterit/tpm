@@ -1,42 +1,74 @@
 import { Suspense } from "react"
 import NewsList from "@/components/news/news-list"
 import type { Metadata } from "next"
+import Header from '../../components/Header'
+import LoopingText from '../../components/LoopingText'
 
 export const metadata: Metadata = {
   title: "News - ThePromptMaster",
   description: "Le ultime notizie dal mondo dell'intelligenza artificiale",
 }
 
+// Disabilita il prerendering statico
+export const dynamic = 'force-dynamic'
+
 async function getNews() {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  const res = await fetch(`${baseUrl}/api/news`, {
-    next: { revalidate: 3600 }
-  })
-  
-  if (!res.ok) {
-    throw new Error('Failed to fetch news')
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const res = await fetch(`${baseUrl}/api/news`, {
+      next: { revalidate: 3600 }
+    })
+    
+    if (!res.ok) {
+      throw new Error('Failed to fetch news')
+    }
+    
+    return res.json()
+  } catch (error) {
+    console.error('Error fetching news:', error)
+    return []
   }
-  
-  return res.json()
 }
 
 export default async function NewsPage() {
   const newsItems = await getNews()
 
   return (
-    <div className="container mx-auto px-4 py-12">
-      <h1 className="text-4xl md:text-5xl font-bold text-center mb-2 uppercase">Ultime Notizie AI</h1>
-      <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
-        Non importa che punto hai raggiunto, queste notizie ti aiuteranno a rimanere aggiornato sull&apos;Intelligenza
-        Artificiale e i suoi utilizzi.
-      </p>
-
-      <div className="max-w-5xl mx-auto">
-        <Suspense fallback={<NewsListSkeleton />}>
-          <NewsList newsItems={newsItems} />
-        </Suspense>
+    <>
+      <Header color='dark' /> 
+      <div className='headMargin'>
+        <div className="strip">
+          <LoopingText
+            text='THE PROMPT MASTER'
+            size='big'
+            velocity={0.08}
+            color='dark'
+          />
+        </div>
+        <div className="strip">
+          <LoopingText
+            text={`L'INTELLIGENZA ARTIFICIALE COME NON LA IMMAGINAVI`}
+            size='small'
+            velocity={0.08}
+            color='dark'
+          />
+        </div>
       </div>
-    </div>
+
+      <div className='section-content'>
+        <div className='content rich-text-block rich-text-block--newsletter'>
+          <h1 className="text-4xl md:text-5xl font-bold text-center mb-2 uppercase">Ultime Notizie AI</h1>
+          <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
+            Non importa che punto hai raggiunto, queste notizie ti aiuteranno a rimanere aggiornato sull&apos;Intelligenza
+            Artificiale e i suoi utilizzi.
+          </p>
+
+          <Suspense fallback={<NewsListSkeleton />}>
+            <NewsList newsItems={newsItems} />
+          </Suspense>
+        </div>
+      </div>      
+    </>
   )
 }
 
