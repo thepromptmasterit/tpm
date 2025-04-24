@@ -1,9 +1,39 @@
 import { NextResponse } from "next/server"
 import * as cheerio from "cheerio"
 import type { NewsItem } from "../../../lib/news/types"
+import OpenAI from 'openai'
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+})
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 3600 // Revalidate every hour
+
+async function translateToItalian(text: string): Promise<string> {
+  try {
+    const completion = await openai.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: "Sei un traduttore professionista dall'inglese all'italiano. Traduci il testo mantenendo il tono e lo stile originale, adattandolo al contesto italiano. Non aggiungere spiegazioni o commenti, restituisci solo la traduzione."
+        },
+        {
+          role: "user",
+          content: `Traduci in italiano il seguente titolo di una news sull'intelligenza artificiale: "${text}"`
+        }
+      ],
+      model: "gpt-3.5-turbo",
+      temperature: 0.3,
+      max_tokens: 100
+    })
+
+    return completion.choices[0].message.content?.trim() || text
+  } catch (error) {
+    console.error("Error translating text:", error)
+    return text
+  }
+}
 
 export async function GET() {
   try {
@@ -26,30 +56,27 @@ export async function GET() {
     const $ = cheerio.load(html)
     const newsItems: NewsItem[] = []
 
-    // Utilizziamo i selettori CSS specifici forniti
-    $(".news-item").each((_, element) => {
+    // Aggiorniamo i selettori CSS per la nuova struttura
+    $('.collection-item-6').each((_, element) => {
       try {
         // Estrai la data
-        const dateElement = $(element).find(".text-block-30.blue-text-dm")
+        const dateElement = $(element).find(".text-block-30")
         const date = dateElement.text().trim()
 
         // Estrai il titolo
-        const titleElement = $(element).find(".text-block-27.white-text-db-gc")
+        const titleElement = $(element).find(".text-block-27")
         const title = titleElement.text().trim()
 
         // Estrai la fonte
-        const sourceElement = $(element).find(".text-block-28.blue-text-dm")
+        const sourceElement = $(element).find(".text-block-28")
         const source = sourceElement.text().trim()
 
         // Estrai l'URL
-        const linkElement = $(element).find("a.link-block-8.w-inline-block")
+        const linkElement = $(element).find("a.link-block-8")
         let url = linkElement.attr("href") || "#"
 
-        // Sostituisci i parametri UTM
-        url = url.replace(
-          /\?utm_source=futuretools\.io(&amp;|&)utm_medium=newspage/,
-          "?utm_source=thepromptmaster.it&utm_medium=newspage",
-        )
+        // Rimuovi i parametri UTM
+        url = url.replace(/\?utm_source=.*$/, "")
 
         // Aggiungi la notizia solo se abbiamo almeno data e titolo
         if (date && title) {
@@ -70,7 +97,18 @@ export async function GET() {
       return NextResponse.json({ error: "No news items found" }, { status: 404 })
     }
 
-    return NextResponse.json(newsItems)
+    // Traduci i titoli delle news
+    const translatedNewsItems = await Promise.all(
+      newsItems.map(async (item) => {
+        const translatedTitle = await translateToItalian(item.title)
+        return {
+          ...item,
+          title: translatedTitle
+        }
+      })
+    )
+
+    return NextResponse.json(translatedNewsItems)
   } catch (error) {
     console.error("Error fetching news:", error)
     return NextResponse.json({ error: "Failed to fetch news" }, { status: 500 })
