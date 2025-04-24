@@ -13,8 +13,7 @@ export const revalidate = 3600 // Revalidate every hour
 async function translateToItalian(text: string): Promise<string> {
   try {
     if (!process.env.OPENAI_API_KEY) {
-      console.error('OPENAI_API_KEY is not set')
-      return text
+      throw new Error('OPENAI_API_KEY is not set')
     }
 
     const completion = await openai.chat.completions.create({
@@ -33,20 +32,23 @@ async function translateToItalian(text: string): Promise<string> {
       max_tokens: 100
     })
 
-    const translatedText = completion.choices[0].message.content?.trim() || text
+    const translatedText = completion.choices[0].message.content?.trim()
+    if (!translatedText) {
+      throw new Error('Translation failed: empty response')
+    }
+    
     console.log(`Original: ${text} | Translated: ${translatedText}`)
     return translatedText
   } catch (error) {
     console.error("Error translating text:", error)
-    return text
+    throw error
   }
 }
 
 export async function GET() {
   try {
     if (!process.env.OPENAI_API_KEY) {
-      console.error('OPENAI_API_KEY is not set in environment variables')
-      return NextResponse.json({ error: 'Translation service not available' }, { status: 500 })
+      throw new Error('OPENAI_API_KEY is not set in environment variables')
     }
 
     // Fetch the HTML content from futuretools.io/news
