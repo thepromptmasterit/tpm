@@ -47,8 +47,16 @@ async function translateToItalian(text: string): Promise<string> {
 
 export async function GET() {
   try {
+    console.log('API Key available:', !!process.env.OPENAI_API_KEY)
+    console.log('Environment:', process.env.NODE_ENV)
+
     if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY is not set in environment variables')
+      console.error('OPENAI_API_KEY is not set in environment variables')
+      return NextResponse.json({ 
+        error: 'Translation service not available',
+        details: 'OPENAI_API_KEY is not set',
+        environment: process.env.NODE_ENV
+      }, { status: 500 })
     }
 
     // Fetch the HTML content from futuretools.io/news
