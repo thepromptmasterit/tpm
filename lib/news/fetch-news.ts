@@ -3,7 +3,7 @@ import { isWithinLastDays } from "./utils"
 
 export async function fetchNews(): Promise<NewsItem[]> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
     const response = await fetch(`${baseUrl}/api/news`, {
       next: { revalidate: 3600 }, // Revalidate every hour
     })
