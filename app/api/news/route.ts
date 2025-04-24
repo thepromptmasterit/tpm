@@ -2,8 +2,16 @@ import { NextResponse } from "next/server"
 import * as cheerio from "cheerio"
 import type { NewsItem } from "../../../lib/news/types"
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 3600 // Revalidate every hour
+
 export async function GET() {
   try {
+    // Se siamo in fase di build, restituiamo un array vuoto
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json([])
+    }
+
     // Fetch the HTML content from futuretools.io/news
     const response = await fetch("https://www.futuretools.io/news", {
       headers: {
