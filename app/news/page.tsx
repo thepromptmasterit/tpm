@@ -1,6 +1,5 @@
 import { Suspense } from "react"
 import NewsList from "@/components/news/news-list"
-import { fetchNews } from "@/lib/news/fetch-news"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -8,8 +7,21 @@ export const metadata: Metadata = {
   description: "Le ultime notizie dal mondo dell'intelligenza artificiale",
 }
 
+async function getNews() {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const res = await fetch(`${baseUrl}/api/news`, {
+    next: { revalidate: 3600 }
+  })
+  
+  if (!res.ok) {
+    throw new Error('Failed to fetch news')
+  }
+  
+  return res.json()
+}
+
 export default async function NewsPage() {
-  const newsItems = await fetchNews()
+  const newsItems = await getNews()
 
   return (
     <div className="container mx-auto px-4 py-12">
