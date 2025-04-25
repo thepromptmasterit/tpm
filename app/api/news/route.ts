@@ -8,7 +8,7 @@ const openai = new OpenAI({
 })
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 3600 // Revalidate every hour
+export const revalidate = 0
 
 async function translateToItalian(text: string): Promise<string> {
   try {
@@ -47,8 +47,10 @@ async function translateToItalian(text: string): Promise<string> {
 
 export async function GET() {
   try {
-    console.log('API Key available:', !!process.env.OPENAI_API_KEY)
+    console.log('=== API NEWS START ===')
     console.log('Environment:', process.env.NODE_ENV)
+    console.log('API Key available:', !!process.env.OPENAI_API_KEY)
+    console.log('API Key length:', process.env.OPENAI_API_KEY?.length || 0)
 
     if (!process.env.OPENAI_API_KEY) {
       console.error('OPENAI_API_KEY is not set in environment variables')
@@ -60,6 +62,7 @@ export async function GET() {
     }
 
     // Fetch the HTML content from futuretools.io/news
+    console.log('Fetching news from futuretools.io...')
     const response = await fetch("https://www.futuretools.io/news", {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
@@ -71,36 +74,35 @@ export async function GET() {
 
     if (!response.ok) {
       console.error(`Failed to fetch: ${response.status}`, await response.text())
-      throw new Error(`Failed to fetch: ${response.status}`)
+      return NextResponse.json({ 
+        error: 'Failed to fetch news',
+        status: response.status,
+        statusText: response.statusText
+      }, { status: response.status })
     }
 
     const html = await response.text()
+    console.log('HTML fetched successfully, length:', html.length)
+    
     const $ = cheerio.load(html)
     const newsItems: NewsItem[] = []
 
-    // Aggiorniamo i selettori CSS per la nuova struttura
+    console.log('Parsing news items...')
     $('.collection-item-6').each((_, element) => {
       try {
-        // Estrai la data
         const dateElement = $(element).find(".text-block-30")
         const date = dateElement.text().trim()
 
-        // Estrai il titolo
         const titleElement = $(element).find(".text-block-27")
         const title = titleElement.text().trim()
 
-        // Estrai la fonte
         const sourceElement = $(element).find(".text-block-28")
         const source = sourceElement.text().trim()
 
-        // Estrai l'URL
         const linkElement = $(element).find("a.link-block-8")
         let url = linkElement.attr("href") || "#"
-
-        // Rimuovi i parametri UTM
         url = url.replace(/\?utm_source=.*$/, "")
 
-        // Aggiungi la notizia solo se abbiamo almeno data e titolo
         if (date && title) {
           newsItems.push({
             date,
@@ -114,25 +116,38 @@ export async function GET() {
       }
     })
 
+    console.log(`Found ${newsItems.length} news items`)
+
     if (newsItems.length === 0) {
       console.error("No news items found in the HTML")
       return NextResponse.json({ error: "No news items found" }, { status: 404 })
     }
 
-    // Traduci i titoli delle news
+    console.log('Starting translation process...')
     const translatedNewsItems = await Promise.all(
       newsItems.map(async (item) => {
-        const translatedTitle = await translateToItalian(item.title)
-        return {
-          ...item,
-          title: translatedTitle
+        try {
+          console.log(`Translating: ${item.title}`)
+          const translatedTitle = await translateToItalian(item.title)
+          console.log(`Translated: ${translatedTitle}`)
+          return {
+            ...item,
+            title: translatedTitle
+          }
+        } catch (error) {
+          console.error(`Error translating title: ${item.title}`, error)
+          return item
         }
       })
     )
 
+    console.log('=== API NEWS END ===')
     return NextResponse.json(translatedNewsItems)
   } catch (error) {
-    console.error("Error fetching news:", error)
-    return NextResponse.json({ error: "Failed to fetch news" }, { status: 500 })
+    console.error("Error in GET function:", error)
+    return NextResponse.json({ 
+      error: "Failed to fetch news",
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }
