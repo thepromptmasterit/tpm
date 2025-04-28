@@ -1,6 +1,5 @@
 {
-  "/api/news/route": "app/api/news/route.js",
-  "/api/news/feed/route": "app/api/news/feed/route.js",
+  "/api/news/rss/route": "app/api/news/rss/route.js",
   "/page": "app/page.js",
   "/news/page": "app/news/page.js"
 }

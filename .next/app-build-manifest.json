@@ -27,6 +27,11 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/api/news/feed/route.js"
+    ],
+    "/api/news/rss/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/news/rss/route.js"
     ]
   }
 }
